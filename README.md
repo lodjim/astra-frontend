@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Astra - Automatic Discovery of Exoplanets
+
+A modern web application for detecting exoplanets using machine learning on TESS (Transiting Exoplanet Survey Satellite) mission data.
+
+## Features
+
+### 🌟 Beautiful UI
+- **Modern Design**: Built with shadcn/ui components and Aceternity UI for stunning visual effects
+- **Dark Mode Support**: Fully responsive design with automatic dark mode
+- **Space-themed Background**: Animated background beams for an immersive experience
+- **Hero Section**: Eye-catching hero with gradient highlights and smooth animations
+
+### 📊 Data Input Methods
+
+#### 1. CSV Upload
+Upload a CSV file containing TESS Objects of Interest (TOI) data with the following columns:
+- `st_pmra` - Angular change in right ascension (mas/yr)
+- `st_pmdec` - Angular change in declination (mas/yr)
+- `pl_tranmid` - Planet Transit Midpoint (BJD)
+- `pl_orbper` - Planet Orbital Period (days)
+- `pl_trandurh` - Planet Transit Duration (hours)
+- `pl_trandep` - Planet Transit Depth (ppm)
+- `pl_rade` - Planet Radius (R⊕)
+- `pl_insol` - Planet Insolation (Earth flux)
+- `pl_eqt` - Planet Equilibrium Temperature (K)
+- `st_tmag` - TESS Magnitude
+- `st_teff` - Stellar Effective Temperature (K)
+- `st_logg` - Stellar log(g) (cm/s²)
+- `st_rad` - Stellar Radius (R☉)
+
+#### 2. Manual Input
+Enter values manually through an intuitive form with labeled inputs for each parameter.
+
+### 🤖 Prediction Models
+
+#### Quick Prediction
+- **Fast Processing**: Get results in ~1 second
+- **Use Case**: Quick approximations for initial screening
+- **Accuracy**: Moderate confidence levels
+
+#### Deep Prediction
+- **ML Model**: Advanced machine learning analysis
+- **LLM Analysis**: Natural language explanation of results
+- **Processing Time**: ~3 seconds for comprehensive analysis
+- **High Accuracy**: Detailed confidence metrics and interpretations
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with React 19
+- **Styling**: Tailwind CSS 4
+- **UI Components**: 
+  - shadcn/ui (Button, Card, Input, Label, Tabs, Textarea)
+  - Aceternity UI (Background Beams, Hero Highlight, File Upload)
+- **Animations**: Framer Motion
+- **Icons**: Lucide React, Tabler Icons
+- **File Handling**: react-dropzone
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 20+ 
+- npm or yarn
+
+### Installation
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data Source
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This application uses data from the [TESS Objects of Interest (TOI) table](https://exoplanetarchive.ipac.caltech.edu/docs/API_TOI_columns.html), maintained by NASA's Exoplanet Archive.
 
-## Learn More
+The TOI list contains parameters for objects identified by the Transiting Exoplanet Survey Satellite mission, including:
+- Planetary properties (radius, orbital period, transit characteristics)
+- Stellar properties (temperature, radius, brightness)
+- Position and proper motion data
 
-To learn more about Next.js, take a look at the following resources:
+## How It Works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Data Input**: Users provide exoplanet observation data either via CSV upload or manual entry
+2. **Preprocessing**: The system validates and processes the input data
+3. **ML Analysis**: Machine learning models analyze the data to predict exoplanet likelihood
+4. **LLM Enhancement**: For deep predictions, an LLM provides human-readable analysis
+5. **Results**: Users receive confidence scores and detailed explanations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Future Enhancements
 
-## Deploy on Vercel
+- [ ] Real-time API integration with NASA Exoplanet Archive
+- [ ] Interactive visualization of orbital parameters
+- [ ] Batch processing for multiple candidates
+- [ ] Export results to various formats
+- [ ] Historical prediction tracking
+- [ ] Advanced filtering and sorting options
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - feel free to use this project for your own purposes.
+
+## Acknowledgments
+
+- NASA Exoplanet Archive for the TESS TOI data
+- shadcn for the beautiful component library
+- Aceternity UI for stunning animations and effects
+- The TESS mission team for their groundbreaking work
+
+---
+
+**Note**: The prediction functionality is currently simulated for demonstration purposes. In a production environment, this would connect to actual ML models and APIs.
