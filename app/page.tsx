@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Zap, Upload, Database } from "lucide-react";
 
-import { apiClient, PredictionRequest, PredictionResponse, LLMPredictionResponse, CSVPredictionResponse } from "@/lib/api";
+import { apiClient, PredictionRequest, PredictionResponse, LLMPredictionResponse, CSVPredictionResponse, SAMPLE_TEST_RECORDS } from "@/lib/api";
+import ExoplanetVisualization from "@/components/ui/exoplanet-visualization";
 
 // Define the exoplanet data structure based on API requirements
 interface ExoplanetData {
@@ -72,6 +73,11 @@ export default function ExoplanetDiscovery() {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [csvResults, setCsvResults] = useState<CSVPredictionResponse | null>(null);
+  const [predictionData, setPredictionData] = useState<{
+    prediction_class: number;
+    confidence: number;
+    inputData: PredictionRequest;
+  } | null>(null);
 
   const handleFileUpload = async (files: File[]) => {
     if (files.length > 0) {
@@ -96,6 +102,30 @@ export default function ExoplanetDiscovery() {
 
   const handleInputChange = (field: keyof ExoplanetData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const loadSampleData = (index: number) => {
+    if (index >= 0 && index < SAMPLE_TEST_RECORDS.length) {
+      const sample = SAMPLE_TEST_RECORDS[index].data;
+      setFormData({
+        dec: sample.dec.toString(),
+        st_pmra: sample.st_pmra.toString(),
+        st_pmdec: sample.st_pmdec.toString(),
+        pl_tranmid: sample.pl_tranmid.toString(),
+        pl_orbper: sample.pl_orbper.toString(),
+        pl_trandurh: sample.pl_trandurh.toString(),
+        pl_trandep: sample.pl_trandep.toString(),
+        pl_rade: sample.pl_rade.toString(),
+        pl_insol: sample.pl_insol.toString(),
+        st_tmag: sample.st_tmag.toString(),
+        st_dist: sample.st_dist.toString(),
+        st_teff: sample.st_teff.toString(),
+        st_logg: sample.st_logg.toString(),
+        st_rad: sample.st_rad.toString(),
+      });
+      setError(null);
+      setResult(null);
+    }
   };
 
   const validateFormData = (): boolean => {
@@ -132,6 +162,7 @@ export default function ExoplanetDiscovery() {
     setError(null);
     setResult(null);
     setCsvResults(null);
+    setPredictionData(null);
     
     if (!validateFormData()) {
       return;
@@ -148,6 +179,13 @@ export default function ExoplanetDiscovery() {
       setResult(
         `Quick Prediction: ${predictionText}! Confidence: ${confidencePercent}%\n\nPrediction Class: ${response.prediction_class}\nMessage: ${response.message}`
       );
+
+      // Store prediction data for visualization
+      setPredictionData({
+        prediction_class: response.prediction_class,
+        confidence: response.prediction_probability,
+        inputData: requestData,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Prediction failed');
     } finally {
@@ -159,6 +197,7 @@ export default function ExoplanetDiscovery() {
     setError(null);
     setResult(null);
     setCsvResults(null);
+    setPredictionData(null);
     
     if (!validateFormData()) {
       return;
@@ -172,8 +211,19 @@ export default function ExoplanetDiscovery() {
       const confidencePercent = (response.confidence * 100).toFixed(1);
       
       setResult(
-        `Deep Prediction: ${response.prediction}\n\nConfidence: ${confidencePercent}%\n\nLLM Analysis:\n${response.explanation}`
+        `Deep Prediction: ${response.label}\n\nConfidence: ${confidencePercent}%\n\nLLM Analysis:\n${response.explanation}`
       );
+
+      // Store prediction data for visualization
+      // For LLM prediction, determine class from the label string
+      // Check for "non-" prefix or "not" to avoid false positives with "Non-Exoplanet"
+      const labelLower = response.label.toLowerCase();
+      const predictionClass = (labelLower.includes('exoplanet') && !labelLower.includes('non-') && !labelLower.includes('not')) ? 1 : 0;
+      setPredictionData({
+        prediction_class: predictionClass,
+        confidence: response.confidence,
+        inputData: requestData,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'LLM prediction failed');
     } finally {
@@ -260,6 +310,38 @@ export default function ExoplanetDiscovery() {
 
                     {/* Manual Input Tab */}
                     <TabsContent value="manual" className="mt-6">
+                      {/* Sample Data Selector */}
+                      <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border/50">
+                        <Label htmlFor="sampleSelect" className="text-sm font-medium mb-2 block">
+                          Load Sample Test Data
+                        </Label>
+                        <div className="flex flex-col gap-2">
+                          <select
+                            id="sampleSelect"
+                            onChange={(e) => {
+                              const index = parseInt(e.target.value);
+                              if (!isNaN(index)) {
+                                loadSampleData(index);
+                              }
+                            }}
+                            className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              -- Select a sample record --
+                            </option>
+                            {SAMPLE_TEST_RECORDS.map((record, index) => (
+                              <option key={index} value={index}>
+                                {record.name} - {record.description}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-muted-foreground">
+                            Choose a pre-filled TESS TOI record to quickly test the prediction models
+                          </p>
+                        </div>
+                      </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto p-2">
                         {(Object.keys(fieldLabels) as Array<keyof ExoplanetData>).map((field) => (
                           <div key={field} className="space-y-2">
@@ -382,6 +464,29 @@ export default function ExoplanetDiscovery() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                )}
+
+                {/* 3D Visualization for Exoplanet Detection */}
+                {predictionData && predictionData.prediction_class === 1 && !error && (
+                  <div className="mt-6">
+                    <div className="mb-4">
+                      <h3 className="font-bold text-xl text-primary">3D System Visualization</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Interactive 3D model of the detected exoplanet system
+                      </p>
+                    </div>
+                    <ExoplanetVisualization
+                      data={{
+                        st_rad: predictionData.inputData.st_rad,
+                        st_tmag: predictionData.inputData.st_tmag,
+                        pl_rade: predictionData.inputData.pl_rade,
+                        pl_orbper: predictionData.inputData.pl_orbper,
+                        st_teff: predictionData.inputData.st_teff,
+                      }}
+                      predictionClass={predictionData.prediction_class}
+                      confidence={predictionData.confidence}
+                    />
                   </div>
                 )}
               </div>
