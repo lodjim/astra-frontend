@@ -11,8 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Zap, Upload, Database } from "lucide-react";
 
-// Define the exoplanet data structure based on TESS TOI columns
+import { apiClient, PredictionRequest, PredictionResponse, LLMPredictionResponse, CSVPredictionResponse } from "@/lib/api";
+
+// Define the exoplanet data structure based on API requirements
 interface ExoplanetData {
+  dec: string;          // Declination [degrees]
   st_pmra: string;      // PMRA [mas/yr] - Angular change in right ascension
   st_pmdec: string;     // PMDec [mas/yr] - Angular change in declination
   pl_tranmid: string;   // Planet Transit Midpoint [BJD]
@@ -21,14 +24,15 @@ interface ExoplanetData {
   pl_trandep: string;   // Planet Transit Depth [ppm]
   pl_rade: string;      // Planet Radius [R_Earth]
   pl_insol: string;     // Planet Insolation [Earth flux]
-  pl_eqt: string;       // Planet Equilibrium Temperature [K]
   st_tmag: string;      // TESS Magnitude
+  st_dist: string;      // Stellar Distance [pc]
   st_teff: string;      // Stellar Effective Temperature [K]
   st_logg: string;      // Stellar log(g) [cm/s**2]
   st_rad: string;       // Stellar Radius [R_Sun]
 }
 
 const initialData: ExoplanetData = {
+  dec: "",
   st_pmra: "",
   st_pmdec: "",
   pl_tranmid: "",
@@ -37,14 +41,15 @@ const initialData: ExoplanetData = {
   pl_trandep: "",
   pl_rade: "",
   pl_insol: "",
-  pl_eqt: "",
   st_tmag: "",
+  st_dist: "",
   st_teff: "",
   st_logg: "",
   st_rad: "",
 };
 
 const fieldLabels: Record<keyof ExoplanetData, { label: string; description: string; unit: string }> = {
+  dec: { label: "Declination", description: "Declination coordinate", unit: "degrees" },
   st_pmra: { label: "PMRA", description: "Angular change in right ascension", unit: "mas/yr" },
   st_pmdec: { label: "PMDec", description: "Angular change in declination", unit: "mas/yr" },
   pl_tranmid: { label: "Transit Midpoint", description: "Planet transit midpoint", unit: "BJD" },
@@ -53,8 +58,8 @@ const fieldLabels: Record<keyof ExoplanetData, { label: string; description: str
   pl_trandep: { label: "Transit Depth", description: "Relative flux decrement", unit: "ppm" },
   pl_rade: { label: "Planet Radius", description: "Radius of the planet", unit: "R⊕" },
   pl_insol: { label: "Insolation", description: "Stellar radiation received", unit: "Earth flux" },
-  pl_eqt: { label: "Equilibrium Temp", description: "Equilibrium temperature", unit: "K" },
   st_tmag: { label: "TESS Magnitude", description: "Brightness in TESS-band", unit: "mag" },
+  st_dist: { label: "Stellar Distance", description: "Distance to the star", unit: "pc" },
   st_teff: { label: "Stellar Temp", description: "Effective temperature", unit: "K" },
   st_logg: { label: "Stellar log(g)", description: "Gravitational acceleration", unit: "cm/s²" },
   st_rad: { label: "Stellar Radius", description: "Radius of the star", unit: "R☉" },
@@ -65,12 +70,27 @@ export default function ExoplanetDiscovery() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [csvResults, setCsvResults] = useState<CSVPredictionResponse | null>(null);
 
-  const handleFileUpload = (files: File[]) => {
+  const handleFileUpload = async (files: File[]) => {
     if (files.length > 0) {
-      setUploadedFile(files[0]);
-      // Here you would parse the CSV file
-      console.log("File uploaded:", files[0].name);
+      const file = files[0];
+      setUploadedFile(file);
+      setError(null);
+      setCsvResults(null);
+      
+      // Automatically process CSV file
+      setIsLoading(true);
+      try {
+        const response = await apiClient.predictCSV(file);
+        setCsvResults(response);
+        setResult(`Successfully processed ${response.rows_count} rows from CSV file.`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to process CSV file');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -78,26 +98,87 @@ export default function ExoplanetDiscovery() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const validateFormData = (): boolean => {
+    // Check if all fields are filled
+    for (const [key, value] of Object.entries(formData)) {
+      if (value === "" || value === null || value === undefined) {
+        setError(`Please fill in all fields. Missing: ${fieldLabels[key as keyof ExoplanetData].label}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const convertFormDataToRequest = (): PredictionRequest => {
+    return {
+      dec: parseFloat(formData.dec),
+      st_pmra: parseFloat(formData.st_pmra),
+      st_pmdec: parseFloat(formData.st_pmdec),
+      pl_tranmid: parseFloat(formData.pl_tranmid),
+      pl_orbper: parseFloat(formData.pl_orbper),
+      pl_trandurh: parseFloat(formData.pl_trandurh),
+      pl_trandep: parseFloat(formData.pl_trandep),
+      pl_rade: parseFloat(formData.pl_rade),
+      pl_insol: parseFloat(formData.pl_insol),
+      st_tmag: parseFloat(formData.st_tmag),
+      st_dist: parseFloat(formData.st_dist),
+      st_teff: parseFloat(formData.st_teff),
+      st_logg: parseFloat(formData.st_logg),
+      st_rad: parseFloat(formData.st_rad),
+    };
+  };
+
   const handleQuickPrediction = async () => {
-    setIsLoading(true);
+    setError(null);
     setResult(null);
-    // Simulate API call
-    setTimeout(() => {
-      setResult("Quick Prediction: Exoplanet candidate detected! Confidence: 72%");
+    setCsvResults(null);
+    
+    if (!validateFormData()) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const requestData = convertFormDataToRequest();
+      const response = await apiClient.predict(requestData);
+      
+      const confidencePercent = (response.prediction_probability * 100).toFixed(1);
+      const predictionText = response.prediction_class === 1 ? "Exoplanet detected" : "Not an exoplanet";
+      
+      setResult(
+        `Quick Prediction: ${predictionText}! Confidence: ${confidencePercent}%\n\nPrediction Class: ${response.prediction_class}\nMessage: ${response.message}`
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Prediction failed');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleDeepPrediction = async () => {
-    setIsLoading(true);
+    setError(null);
     setResult(null);
-    // Simulate API call with longer processing time
-    setTimeout(() => {
+    setCsvResults(null);
+    
+    if (!validateFormData()) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const requestData = convertFormDataToRequest();
+      const response = await apiClient.llmPredict(requestData);
+      
+      const confidencePercent = (response.confidence * 100).toFixed(1);
+      
       setResult(
-        "Deep Prediction: Strong exoplanet signature detected! ML Confidence: 94% | LLM Analysis: This appears to be a hot Jupiter-like planet orbiting a sun-like star with a period of ~3.5 days. The transit depth suggests a planet radius of approximately 1.2 Jupiter radii."
+        `Deep Prediction: ${response.prediction}\n\nConfidence: ${confidencePercent}%\n\nLLM Analysis:\n${response.explanation}`
       );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'LLM prediction failed');
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
   return (
@@ -246,10 +327,61 @@ export default function ExoplanetDiscovery() {
                   </div>
                 )}
 
-                {result && (
+                {error && (
+                  <div className="mt-6 p-6 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <h3 className="font-bold text-lg mb-2 text-destructive">Error</h3>
+                    <p className="text-sm leading-relaxed">{error}</p>
+                  </div>
+                )}
+
+                {result && !error && (
                   <div className="mt-6 p-6 bg-primary/10 border border-primary/20 rounded-lg">
                     <h3 className="font-bold text-lg mb-2 text-primary">Results</h3>
-                    <p className="text-sm leading-relaxed">{result}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{result}</p>
+                  </div>
+                )}
+
+                {csvResults && !error && (
+                  <div className="mt-6 space-y-4">
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <h3 className="font-bold text-lg mb-2 text-green-600 dark:text-green-400">
+                        CSV Processing Complete
+                      </h3>
+                      <p className="text-sm">
+                        Processed {csvResults.rows_count} row(s) successfully
+                      </p>
+                    </div>
+                    
+                    <div className="max-h-96 overflow-auto border rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="px-4 py-2 text-left">#</th>
+                            <th className="px-4 py-2 text-left">Prediction</th>
+                            <th className="px-4 py-2 text-left">Confidence</th>
+                            <th className="px-4 py-2 text-left">Class</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvResults.data.map((item, idx) => (
+                            <tr key={idx} className="border-t hover:bg-muted/50">
+                              <td className="px-4 py-2">{idx + 1}</td>
+                              <td className="px-4 py-2">
+                                {item.prediction_class === 1 ? (
+                                  <span className="text-green-600 dark:text-green-400">Exoplanet</span>
+                                ) : (
+                                  <span className="text-red-600 dark:text-red-400">Not Exoplanet</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2">
+                                {(item.prediction_probability * 100).toFixed(2)}%
+                              </td>
+                              <td className="px-4 py-2">{item.prediction_class}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
