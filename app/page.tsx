@@ -134,126 +134,126 @@ export default function ExoplanetDiscovery() {
         {/* Main Content */}
         <div className="max-w-5xl mx-auto mt-8 space-y-6">
           <Card className="backdrop-blur-sm bg-card/80 border-2">
-            <CardHeader>
-              <CardTitle className="text-2xl">Input Method</CardTitle>
-              <CardDescription>
-                Choose how you want to provide your exoplanet data
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="csv" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="csv" className="flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    CSV Upload
-                  </TabsTrigger>
-                  <TabsTrigger value="manual" className="flex items-center gap-2">
-                    <Database className="w-4 h-4" />
-                    Manual Input
-                  </TabsTrigger>
-                </TabsList>
+            <div className="p-6 space-y-6">
+              <div>
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-2xl">Input Method</CardTitle>
+                  <CardDescription>
+                    Choose how you want to provide your exoplanet data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="csv" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="csv" className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        CSV Upload
+                      </TabsTrigger>
+                      <TabsTrigger value="manual" className="flex items-center gap-2">
+                        <Database className="w-4 h-4" />
+                        Manual Input
+                      </TabsTrigger>
+                    </TabsList>
 
-                {/* CSV Upload Tab */}
-                <TabsContent value="csv" className="mt-6">
-                  <div className="space-y-4">
-                    <div className="text-sm text-muted-foreground">
-                      <p className="font-medium mb-2">Required CSV columns:</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 font-mono text-xs bg-muted/50 p-4 rounded-lg">
-                        {Object.keys(fieldLabels).map((key) => (
-                          <span key={key} className="text-foreground/80">
-                            {key}
-                          </span>
+                    {/* CSV Upload Tab */}
+                    <TabsContent value="csv" className="mt-6">
+                      <div className="space-y-4">
+                        <div className="text-sm text-muted-foreground">
+                          <p className="font-medium mb-2">Required CSV columns:</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 font-mono text-xs bg-muted/50 p-4 rounded-lg">
+                            {Object.keys(fieldLabels).map((key) => (
+                              <span key={key} className="text-foreground/80">
+                                {key}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <FileUpload onChange={handleFileUpload} />
+                        {uploadedFile && (
+                          <div className="text-sm text-green-600 dark:text-green-400">
+                            ✓ File uploaded: {uploadedFile.name}
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    {/* Manual Input Tab */}
+                    <TabsContent value="manual" className="mt-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto p-2">
+                        {(Object.keys(fieldLabels) as Array<keyof ExoplanetData>).map((field) => (
+                          <div key={field} className="space-y-2">
+                            <Label htmlFor={field} className="text-sm font-medium">
+                              {fieldLabels[field].label}
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({fieldLabels[field].unit})
+                              </span>
+                            </Label>
+                            <Input
+                              id={field}
+                              type="number"
+                              step="any"
+                              placeholder={fieldLabels[field].description}
+                              value={formData[field]}
+                              onChange={(e) => handleInputChange(field, e.target.value)}
+                              className="w-full"
+                            />
+                          </div>
                         ))}
                       </div>
-                    </div>
-                    <FileUpload onChange={handleFileUpload} />
-                    {uploadedFile && (
-                      <div className="text-sm text-green-600 dark:text-green-400">
-                        ✓ File uploaded: {uploadedFile.name}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* Manual Input Tab */}
-                <TabsContent value="manual" className="mt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto p-2">
-                    {(Object.keys(fieldLabels) as Array<keyof ExoplanetData>).map((field) => (
-                      <div key={field} className="space-y-2">
-                        <Label htmlFor={field} className="text-sm font-medium">
-                          {fieldLabels[field].label}
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({fieldLabels[field].unit})
-                          </span>
-                        </Label>
-                        <Input
-                          id={field}
-                          type="number"
-                          step="any"
-                          placeholder={fieldLabels[field].description}
-                          value={formData[field]}
-                          onChange={(e) => handleInputChange(field, e.target.value)}
-                          className="w-full"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Prediction Buttons */}
-          <Card className="backdrop-blur-sm bg-card/80 border-2">
-            <CardHeader>
-              <CardTitle className="text-2xl">Run Prediction</CardTitle>
-              <CardDescription>
-                Choose between fast approximation or deep analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button
-                  onClick={handleQuickPrediction}
-                  disabled={isLoading}
-                  className="h-auto py-6 flex flex-col items-center gap-2"
-                  variant="outline"
-                >
-                  <Zap className="w-6 h-6" />
-                  <div>
-                    <div className="font-bold">Quick Prediction</div>
-                    <div className="text-xs font-normal text-muted-foreground">
-                      Fast but less accurate
-                    </div>
-                  </div>
-                </Button>
-                <Button
-                  onClick={handleDeepPrediction}
-                  disabled={isLoading}
-                  className="h-auto py-6 flex flex-col items-center gap-2"
-                >
-                  <Sparkles className="w-6 h-6" />
-                  <div>
-                    <div className="font-bold">Deep Prediction</div>
-                    <div className="text-xs font-normal">ML Model + LLM Analysis</div>
-                  </div>
-                </Button>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
               </div>
 
-              {isLoading && (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <p className="mt-4 text-sm text-muted-foreground">Processing your data...</p>
+              {/* Prediction Buttons */}
+              <div className="pt-6 border-t border-border">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-semibold mb-2">Run Prediction</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose between fast approximation or deep analysis
+                  </p>
                 </div>
-              )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
+                    onClick={handleQuickPrediction}
+                    disabled={isLoading}
+                    className="h-auto py-6 flex flex-col items-center gap-2"
+                    variant="outline"
+                  >
+                    <div>
+                      <div className="font-bold">Quick Prediction</div>
+                      <div className="text-xs font-normal text-muted-foreground">
+                        Fast but less accurate
+                      </div>
+                    </div>
+                  </Button>
+                  <Button
+                    onClick={handleDeepPrediction}
+                    disabled={isLoading}
+                    className="h-auto py-6 flex flex-col items-center gap-2"
+                  >
+                    <div>
+                      <div className="font-bold">Deep Prediction</div>
+                      <div className="text-xs font-normal">ML Model + LLM Analysis</div>
+                    </div>
+                  </Button>
+                </div>
 
-              {result && (
-                <div className="mt-6 p-6 bg-primary/10 border border-primary/20 rounded-lg">
-                  <h3 className="font-bold text-lg mb-2 text-primary">Results</h3>
-                  <p className="text-sm leading-relaxed">{result}</p>
-                </div>
-              )}
-            </CardContent>
+                {isLoading && (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p className="mt-4 text-sm text-muted-foreground">Processing your data...</p>
+                  </div>
+                )}
+
+                {result && (
+                  <div className="mt-6 p-6 bg-primary/10 border border-primary/20 rounded-lg">
+                    <h3 className="font-bold text-lg mb-2 text-primary">Results</h3>
+                    <p className="text-sm leading-relaxed">{result}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* Information Card */}
